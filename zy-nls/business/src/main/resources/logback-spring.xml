@@ -1,0 +1,265 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 日志级别从低到高分为TRACE < DEBUG < INFO < WARN < ERROR < FATAL，如果设置为WARN，则低于WARN的信息都不会输出 -->
+<!-- scan:当此属性设置为true时，配置文件如果发生改变，将会被重新加载，默认值为true -->
+<!-- scanPeriod:设置监测配置文件是否有修改的时间间隔，如果没有给出时间单位，默认单位是毫秒。当scan为true时，此属性生效。默认的时间间隔为1分钟。 -->
+<!-- debug:当此属性设置为true时，将打印出logback内部日志信息，实时查看logback运行状态。默认值为false。 -->
+<configuration scan="true" scanPeriod="10 seconds">
+
+    <contextName>logback</contextName>
+    <!-- name的值是变量的名称，value的值时变量定义的值。通过定义的值会被插入到logger上下文中。定义变量后，可以使“${}”来使用变量。 -->
+    <property name="log.path" value="./logs"/>
+
+    <!--输出到控制台 -->
+    <!-- appender是configuration的子节点，是负责写日志的组件。 -->
+    <!-- ConsoleAppender：把日志输出到控制台 -->
+    <appender name="stdout" class="ch.qos.logback.core.ConsoleAppender">
+        <!-- ThresholdFilter 过滤低于指定阈值的事件。 对于等于或高于阈值的事件，ThresholdFilter将在调用其decision（）方法时响应NEUTRAL。
+            但是，将拒绝级别低于阈值的事件， -->
+        <!-- 下面的配置将拒绝所有低于trace级别的日志，只输出trace以及以上级别的日志 -->
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>trace</level>
+        </filter>
+        <!-- %d{yyyy-MM-dd HH:mm:ss.SSS}：日期 -->
+        <!-- %-5level：日志级别 -->
+        <!-- %highlight()：颜色，info为蓝色，warn为浅红，error为加粗红，debug为黑色 -->
+        <!-- %thread：打印日志的线程 -->
+        <!-- %15.15():如果记录的线程字符长度小于15(第一个)则用空格在左侧补齐,如果字符长度大于15(第二个),则从开头开始截断多余的字符 -->
+        <!-- %logger：日志输出的类名 -->
+        <!-- %-40.40()：如果记录的logger字符长度小于40(第一个)则用空格在右侧补齐,如果字符长度大于40(第二个),则从开头开始截断多余的字符 -->
+        <!-- %cyan：颜色 -->
+        <!-- %msg：日志输出内容 -->
+        <!-- %n：换行符 -->
+        <encoder>
+            <!--<pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %highlight(%-5level) -&#45;&#45; [%15.15(%thread)] [%X{LOG_ID}]
+                %cyan(%-40.40(%logger{40})) : %msg%n
+            </pattern>-->
+            <pattern>%d{mm:ss.SSS} %highlight(%-5level) %yellow(%-50logger{50} %-4line) %green(%-19X{LOG_ID}) %msg%n</pattern>
+            <!-- 设置字符集 -->
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!--输出到文件 -->
+
+    <!-- debug 日志 -->
+    <!-- RollingFileAppender：滚动记录文件，先将日志记录到指定文件，当符合某个条件时，将日志记录到其他文件 -->
+    <!-- 以下的大概意思是：1.先按日期存日志，日期变了，将前一天的日志文件名重命名为XXX%日期%索引，新的日志仍然是log-debug.log -->
+    <!-- 2.如果日期没有发生变化，但是当前日志的文件大小超过10MB时，对当前日志进行分割 重命名 -->
+    <appender name="debug_log"
+              class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <!-- 正在记录的日志文件的路径及文件名 -->
+        <file>${log.path}/log-debug.log</file>
+        <!--是否追加到文件末尾,默认为true -->
+        <append>true</append>
+        <!-- LevelFilter 根据精确的级别匹配过滤事件。 如果事件的级别等于配置的级别，则筛选器接受或拒绝该事件，具体取决于onMatch和onMismatch属性的配置。DENY:禁止;ACCEPT:使用 -->
+        <!-- 下面配置将只打印debug级别的日志，其余的全部禁止打印输出 -->
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>debug</level>
+            <!-- 如果命中debug就输出日志（ACCEPT：大小写敏感，必须大写） -->
+            <onMatch>ACCEPT</onMatch>
+            <!-- 如果没有命中debug就禁止这条日志（DENY：大小写敏感，必须大写） -->
+            <onMismatch>DENY</onMismatch>
+        </filter>
+        <!--日志文件输出格式 -->
+        <encoder>
+            <!--<pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{LOG_ID}] %logger{50} - %msg%n</pattern>-->
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level %-50logger{50} %-4line %thread %-19X{LOG_ID} %msg%n</pattern>
+            <!-- 设置字符集 -->
+            <charset>UTF-8</charset>
+        </encoder>
+        <!--有两个与RollingFileAppender交互的重要子组件。 第一个RollingFileAppender子组件，即RollingPolicy:负责执行翻转所需的操作。
+            RollingFileAppender的第二个子组件，即TriggeringPolicy:将确定是否以及何时发生翻转。 因此，RollingPolicy负责什么和TriggeringPolicy负责什么时候.
+            作为任何用途，RollingFileAppender必须同时设置RollingPolicy和TriggeringPolicy,但是，如果其RollingPolicy也实现了TriggeringPolicy接口，则只需要显式指定前者。 -->
+        <rollingPolicy
+                class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <!-- 日志文件的名字会根据fileNamePattern的值，每隔一段时间改变一次 -->
+            <!-- 文件名：logs/log-debug.2017-12-05.0.log -->
+            <!-- 注意：SizeAndTimeBasedRollingPolicy中 ％i和％d令牌都是强制性的，必须存在，要不会报错 -->
+            <fileNamePattern>${log.path}/debug/log-debug-%d{yyyy-MM-dd}.%d.%i.log
+            </fileNamePattern>
+            <!-- 每产生一个日志文件，该日志文件的保存期限为30天, ps:maxHistory的单位是根据fileNamePattern中的翻转策略自动推算出来的,例如上面选用了yyyy-MM-dd,则单位为天
+                如果上面选用了yyyy-MM,则单位为月,另外上面的单位默认为yyyy-MM-dd -->
+            <maxHistory>30</maxHistory>
+            <!-- 每个日志文件到10mb的时候开始切分，最多保留30天，但最大到20GB，哪怕没到30天也要删除多余的日志 -->
+            <totalSizeCap>20GB</totalSizeCap>
+            <!-- maxFileSize:这是活动文件的大小，默认值是10MB，测试时可改成5KB看效果 -->
+            <maxFileSize>10MB</maxFileSize>
+        </rollingPolicy>
+    </appender>
+
+    <!-- info 日志 -->
+    <!-- RollingFileAppender：滚动记录文件，先将日志记录到指定文件，当符合某个条件时，将日志记录到其他文件 -->
+    <!-- 以下的大概意思是：1.先按日期存日志，日期变了，将前一天的日志文件名重命名为XXX%日期%索引，新的日志仍然是log-info.log -->
+    <!-- 2.如果日期没有发生变化，但是当前日志的文件大小超过10MB时，对当前日志进行分割 重命名 -->
+    <appender name="info_log"
+              class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <!-- 正在记录的日志文件的路径及文件名 -->
+        <file>${log.path}/log-info.log</file>
+        <!--是否追加到文件末尾,默认为true -->
+        <append>true</append>
+        <!-- 此日志文件只记录info级别的 -->
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>info</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+        <!--日志文件输出格式 -->
+        <encoder>
+            <!--<pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{LOG_ID}] %logger{50} - %msg%n</pattern>-->
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level %-50logger{50} %-4line %thread %-19X{LOG_ID} %msg%n</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+        <!--有两个与RollingFileAppender交互的重要子组件。 第一个RollingFileAppender子组件，即RollingPolicy:负责执行翻转所需的操作。
+            RollingFileAppender的第二个子组件，即TriggeringPolicy:将确定是否以及何时发生翻转。 因此，RollingPolicy负责什么和TriggeringPolicy负责什么时候.
+            作为任何用途，RollingFileAppender必须同时设置RollingPolicy和TriggeringPolicy,但是，如果其RollingPolicy也实现了TriggeringPolicy接口，则只需要显式指定前者。 -->
+        <rollingPolicy
+                class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <!-- 日志文件的名字会根据fileNamePattern的值，每隔一段时间改变一次 -->
+            <!-- 文件名：logs/project_info.2017-12-05.0.log -->
+            <!-- 注意：SizeAndTimeBasedRollingPolicy中 ％i和％d令牌都是强制性的，必须存在，要不会报错 -->
+            <fileNamePattern>${log.path}/info/log-info-%d{yyyy-MM-dd}.%d.%i.log
+            </fileNamePattern>
+            <!-- 每产生一个日志文件，该日志文件的保存期限为30天, ps:maxHistory的单位是根据fileNamePattern中的翻转策略自动推算出来的,例如上面选用了yyyy-MM-dd,则单位为天
+                如果上面选用了yyyy-MM,则单位为月,另外上面的单位默认为yyyy-MM-dd -->
+            <maxHistory>30</maxHistory>
+            <!-- 每个日志文件到10mb的时候开始切分，最多保留30天，但最大到20GB，哪怕没到30天也要删除多余的日志 -->
+            <totalSizeCap>20GB</totalSizeCap>
+            <!-- maxFileSize:这是活动文件的大小，默认值是10MB，测试时可改成5KB看效果 -->
+            <maxFileSize>10MB</maxFileSize>
+        </rollingPolicy>
+    </appender>
+
+    <!-- warn 日志 -->
+    <!-- RollingFileAppender：滚动记录文件，先将日志记录到指定文件，当符合某个条件时，将日志记录到其他文件 -->
+    <!-- 以下的大概意思是：1.先按日期存日志，日期变了，将前一天的日志文件名重命名为XXX%日期%索引，新的日志仍然是log-warn.log -->
+    <!-- 2.如果日期没有发生变化，但是当前日志的文件大小超过10MB时，对当前日志进行分割 重命名 -->
+    <appender name="warn_log"
+              class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <!-- 正在记录的日志文件的路径及文件名 -->
+        <file>${log.path}/log-warn.log</file>
+        <!--是否追加到文件末尾,默认为true -->
+        <append>true</append>
+        <!-- 此日志文件只记录warn级别的 -->
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>warn</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+        <!--日志文件输出格式 -->
+        <encoder>
+            <!--<pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{LOG_ID}] %logger{50} - %msg%n</pattern>-->
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level %-50logger{50} %-4line %thread %-19X{LOG_ID} %msg%n</pattern>
+            <charset>UTF-8</charset> <!-- 此处设置字符集 -->
+        </encoder>
+        <!--有两个与RollingFileAppender交互的重要子组件。 第一个RollingFileAppender子组件，即RollingPolicy:负责执行翻转所需的操作。
+            RollingFileAppender的第二个子组件，即TriggeringPolicy:将确定是否以及何时发生翻转。 因此，RollingPolicy负责什么和TriggeringPolicy负责什么时候.
+            作为任何用途，RollingFileAppender必须同时设置RollingPolicy和TriggeringPolicy,但是，如果其RollingPolicy也实现了TriggeringPolicy接口，则只需要显式指定前者。 -->
+        <rollingPolicy
+                class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <!-- 日志文件的名字会根据fileNamePattern的值，每隔一段时间改变一次 -->
+            <!-- 文件名：logs/project_info.2017-12-05.0.log -->
+            <!-- 注意：SizeAndTimeBasedRollingPolicy中 ％i和％d令牌都是强制性的，必须存在，要不会报错 -->
+            <fileNamePattern>${log.path}/warn/log-warn-%d{yyyy-MM-dd}.%d.%i.log
+            </fileNamePattern>
+            <!-- 每产生一个日志文件，该日志文件的保存期限为30天, ps:maxHistory的单位是根据fileNamePattern中的翻转策略自动推算出来的,例如上面选用了yyyy-MM-dd,则单位为天
+                如果上面选用了yyyy-MM,则单位为月,另外上面的单位默认为yyyy-MM-dd -->
+            <maxHistory>30</maxHistory>
+            <!-- 每个日志文件到10mb的时候开始切分，最多保留30天，但最大到20GB，哪怕没到30天也要删除多余的日志 -->
+            <totalSizeCap>20GB</totalSizeCap>
+            <!-- maxFileSize:这是活动文件的大小，默认值是10MB，测试时可改成5KB看效果 -->
+            <maxFileSize>10MB</maxFileSize>
+        </rollingPolicy>
+    </appender>
+
+    <!-- error 日志 -->
+    <!-- RollingFileAppender：滚动记录文件，先将日志记录到指定文件，当符合某个条件时，将日志记录到其他文件 -->
+    <!-- 以下的大概意思是：1.先按日期存日志，日期变了，将前一天的日志文件名重命名为XXX%日期%索引，新的日志仍然是log-error.log -->
+    <!-- 2.如果日期没有发生变化，但是当前日志的文件大小超过10MB时，对当前日志进行分割 重命名 -->
+    <appender name="error_log"
+              class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <!-- 正在记录的日志文件的路径及文件名 -->
+        <file>${log.path}/log-error.log</file>
+        <!--是否追加到文件末尾,默认为true -->
+        <append>true</append>
+        <!-- 此日志文件只记录error级别的 -->
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>error</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+        <!--日志文件输出格式 -->
+        <encoder>
+            <!-- <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{LOG_ID}] %logger{50} - %msg%n</pattern>-->
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level %-50logger{50} %-4line %thread %-19X{LOG_ID} %msg%n</pattern>
+            <charset>UTF-8</charset> <!-- 此处设置字符集 -->
+        </encoder>
+        <!--有两个与RollingFileAppender交互的重要子组件。 第一个RollingFileAppender子组件，即RollingPolicy:负责执行翻转所需的操作。
+            RollingFileAppender的第二个子组件，即TriggeringPolicy:将确定是否以及何时发生翻转。 因此，RollingPolicy负责什么和TriggeringPolicy负责什么时候.
+            作为任何用途，RollingFileAppender必须同时设置RollingPolicy和TriggeringPolicy,但是，如果其RollingPolicy也实现了TriggeringPolicy接口，则只需要显式指定前者。 -->
+        <rollingPolicy
+                class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <!-- 日志文件的名字会根据fileNamePattern的值，每隔一段时间改变一次 -->
+            <!-- 文件名：logs/project_info.2017-12-05.0.log -->
+            <!-- 注意：SizeAndTimeBasedRollingPolicy中 ％i和％d令牌都是强制性的，必须存在，要不会报错 -->
+            <fileNamePattern>${log.path}/error/log-error-%d{yyyy-MM-dd}.%d.%i.log
+            </fileNamePattern>
+            <!-- 每产生一个日志文件，该日志文件的保存期限为30天, ps:maxHistory的单位是根据fileNamePattern中的翻转策略自动推算出来的,例如上面选用了yyyy-MM-dd,则单位为天
+                如果上面选用了yyyy-MM,则单位为月,另外上面的单位默认为yyyy-MM-dd -->
+            <maxHistory>30</maxHistory>
+            <!-- 每个日志文件到10mb的时候开始切分，最多保留30天，但最大到20GB，哪怕没到30天也要删除多余的日志 -->
+            <totalSizeCap>20GB</totalSizeCap>
+            <!-- maxFileSize:这是活动文件的大小，默认值是10MB，测试时可改成5KB看效果 -->
+            <maxFileSize>10MB</maxFileSize>
+        </rollingPolicy>
+    </appender>
+
+    <!-- 记录器：<logger>元素只接受一个必需的name属性，一个可选的level属性和一个可选的additivity属性，允许值为true或false。 -->
+    <!-- name:用来指定受此logger约束的某一个包或者具体的某一个类。 -->
+    <!-- level:用来设置打印级别，大小写无关：TRACE, DEBUG, INFO, WARN, ERROR, ALL 和 OFF， 还有一个特俗值INHERITED或者同义词NULL，代表强制执行上级的级别。 -->
+    <!-- addtivity:是否向上级logger传递打印信息。默认是true -->
+    <!-- logback不仅会继承level，也会继承appender。无论addtivity为true还是false子记录器都会继承其父记录器的level，但是当additivity为false的时候子记录器将停止继承父记录器的appender-->
+    <!-- 假设存在根root、X、X.Y、X.Y.Z四个记录器 -->
+    <!-- 例1：仅为根记录器分配了级别。 此级别值DEBUG由其他记录器X，X.Y和X.Y.Z继承 -->
+    <!-- 例2：所有记录器都有一个指定的级别值。 级别继承不起作用 -->
+    <!-- 例3：记录器root，X和X.Y.Z分别被分配了DEBUG，INFO和ERROR级别。 Logger X.Y从其父X继承其级别值。 -->
+    <!-- 例4：记录器root和X分别被分配了DEBUG和INFO级别。 记录器X.Y和X.Y.Z从其最近的父X继承其级别值，该父级具有指定的级别。 -->
+
+    <!--输出目标：<appender-ref>给定记录器的每个启用的日志记录请求都将转发到该记录器中的所有appender以及层次结构中较高的appender。-->
+    <!--换句话说，appender是从记录器层次结构中附加地继承的。-->
+    <!--例如，如果将控制台appender添加到根记录器，则所有启用的日志记录请求将至少在控制台上打印。-->
+
+    <!-- configuration中最多允许一个root，别的logger如果没有设置级别则从父级别root继承 -->
+    <!--例如：root的level为info时，root将级别为“info”及大于“info”的日志信息交给已经配置好的名为“stdout”的appender处理，“stdout”appender将信息打印到控制台；-->
+
+    <root level="error">
+        <appender-ref ref="error_log"/>
+    </root>
+
+    <root level="debug">
+        <appender-ref ref="debug_log"/>
+    </root>
+
+    <root level="info">
+        <appender-ref ref="stdout"/>
+        <!--        <appender-ref ref="debug_log"/>-->
+    </root>
+<!--    <root level="ERROR">-->
+<!--        <appender-ref ref="error_log"/>-->
+<!--    </root>-->
+    <!-- 指定项目中某个包，当有日志操作行为时的日志记录级别 -->
+    <!-- 级别依次为【从高到低】：FATAL > ERROR > WARN > INFO > DEBUG > TRACE -->
+    <!-- <logger name="org.duo.business" level="info" additivity="false"> -->
+    <!--    <logger name="org.duo.business">
+            <appender-ref ref="info_log"/>
+            <appender-ref ref="warn_log"/>
+            <appender-ref ref="error_log"/>
+        </logger>-->
+
+    <!--指定package:org.duo.business.mapper输出level="trace"的日志，-->
+    <!--由于当additivity=true的时候appender是从记录器层次结构中附加地继承的（注意是继承所有的父记录器中的appender），-->
+    <!--所以虽然下面的记录器(logger)没有指定输出目标(appender-ref)，下面的记录器会继承root和org.duo.business中的appender，-->
+    <!-- 注意：如果不加 additivity="false" 则此logger会将输出转发到自身以及祖先的logger的appender中，就会出现日志文件重复打印 -->
+    <!--additivity=false代表禁止默认累计的行为，即org.duo.business.mapper中的日志只会记录到自己的appender中，不会附加地继承级别更高的记录器中的appender-->
+    <!-- <logger name="org.duo.business.mapper" level="trace"/>-->
+
+</configuration>
